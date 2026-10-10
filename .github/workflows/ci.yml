@@ -40,6 +40,8 @@ jobs:
           node-version: "22"
           cache: npm
       - run: npm ci
+      # Next generates global types (e.g. LayoutProps) that a fresh checkout does not have yet.
+      - run: npx next typegen
       - run: npx tsc --noEmit
       - run: npx eslint app components lib
       - run: npx next build
