@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Volume2, VolumeX } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import VoiceInput from "@/components/patient/VoiceInput";
@@ -30,6 +30,7 @@ function Interview() {
   const [loaded, setLoaded] = useState(false);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+
   const key = session ? `answers.${session.visitId}` : null;
 
   useEffect(() => {
@@ -46,6 +47,33 @@ function Interview() {
   const questions = useMemo(() => visibleQuestions(answers), [answers]);
   const safeIndex = Math.min(index, questions.length - 1);
   const q = questions[safeIndex];
+
+  const [speaking, setSpeaking] = useState(false);
+
+  // Stop speaking if question changes
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+    }
+  }, [q?.id]);
+
+  function toggleSpeech(textToSpeak: string) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (speaking) {
+      window.speechSynthesis.cancel();
+      setSpeaking(false);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    utterance.lang = lang === "hi" ? "hi-IN" : lang === "mr" ? "mr-IN" : "en-IN";
+    utterance.rate = 0.9;
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    setSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  }
 
   useEffect(() => {
     if (key && loaded) saveDraft(key, { answers, index: safeIndex });
@@ -121,7 +149,23 @@ function Interview() {
         <div className="h-full rounded-full bg-brand-600 transition-all duration-300" style={{ width: `${((safeIndex + 1) / questions.length) * 100}%` }} />
       </div>
 
-      <h1 className="text-2xl font-semibold leading-snug tracking-tight text-slate-900 sm:text-[28px]">{q.question[lang] ?? q.question.en}</h1>
+            <div className="flex items-start justify-between gap-3">
+        <h1 className="text-2xl font-semibold leading-snug tracking-tight text-slate-900 sm:text-[28px]">
+          {q.question[lang] ?? q.question.en}
+        </h1>
+        <button
+          type="button"
+          onClick={() => toggleSpeech((q.question[lang] ?? q.question.en) + (q.helpText ? '. ' + (q.helpText[lang] ?? q.helpText.en) : ''))}
+          className={cn(
+            "mt-1 flex size-10 shrink-0 items-center justify-center rounded-full border transition-colors",
+            speaking ? "border-brand-600 bg-brand-50 text-brand-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+          )}
+          aria-label={speaking ? "Stop read-aloud" : "Read question aloud"}
+          title={speaking ? "Stop" : "Read aloud"}
+        >
+          {speaking ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
+        </button>
+      </div>
       {q.helpText && <p className="mt-2 text-[17px] text-slate-600">{q.helpText[lang] ?? q.helpText.en}</p>}
 
       <div className="mt-8">

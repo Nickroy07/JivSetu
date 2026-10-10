@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // JIVSETU — CLINICAL RED FLAG ENGINE
 // Rule-based screening layer.
 // IMPORTANT: This is NOT a diagnostic engine.
@@ -203,6 +203,54 @@ export function evaluateRedFlags(
         "attention",
         "Palpitations reported with chest pain.",
         "palpitations"
+      );
+    }
+  }
+
+  // --- Fever screening flags ---
+  if (complaint === "fever") {
+    if (isYes(answers["breathlessness"])) {
+      add(
+        "FEVER_BREATHLESSNESS",
+        "urgent",
+        "Breathing difficulty reported with fever.",
+        "breathlessness"
+      );
+    }
+
+    if (isYes(answers["fever_chills"])) {
+      add(
+        "FEVER_WITH_CHILLS",
+        "attention",
+        "Fever with chills or shivering reported.",
+        "fever_chills"
+      );
+    }
+
+    const temp = answers["fever_temperature"];
+    if (temp && (temp.includes("103") || temp.includes("104") || temp.includes("105"))) {
+      add(
+        "HIGH_GRADE_FEVER",
+        "urgent",
+        "High-grade fever (>103°F) reported.",
+        "fever_temperature"
+      );
+    }
+
+    const otherSymptom = answers["fever_cough_vomiting"];
+    if (otherSymptom === "vomiting") {
+      add(
+        "FEVER_VOMITING",
+        "attention",
+        "Fever associated with vomiting or dehydration risk.",
+        "fever_cough_vomiting"
+      );
+    } else if (otherSymptom === "rash") {
+      add(
+        "FEVER_WITH_RASH",
+        "urgent",
+        "Fever with skin rash reported (needs prompt examination).",
+        "fever_cough_vomiting"
       );
     }
   }
