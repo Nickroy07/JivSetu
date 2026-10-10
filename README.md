@@ -1,11 +1,48 @@
 # Jivsetu AI
 
-From patient conversations to structured clinical histories.
+**From patient conversations to structured clinical histories.**
+
+ABDM provides the digital-health interoperability ecosystem; Jivsetu addresses the
+patient-facing data-collection bottleneck by converting voice, touch, text and medical
+documents into structured, verified clinical information that can be designed for
+FHIR/ABDM interoperability.
 
 Patients answer a guided, multilingual (English / हिन्दी / मराठी) interview and upload
 prescriptions or reports. Jivsetu extracts what it can from the documents, checks for
 missing and conflicting information, and prepares a **draft** clinical history that a
-clinician reviews, corrects and accepts. Drafts are never presented as a diagnosis.
+clinician reviews, corrects and accepts. Drafts are never presented as a diagnosis, and
+Jivsetu does not replace clinical judgement.
+
+## Features
+
+**Patient**
+- Mobile-number sign-in with OTP (SMS via MSG91; clearly labelled dev mode locally)
+- Guided, one-question-at-a-time interview in English, Hindi and Marathi, with voice input where the browser supports it
+- Red-flag symptom detection with urgent-care guidance
+- Prescription / report upload with live progress, processing status and retry
+- Review-and-correct step before submission, and a genuine confirmation screen
+
+**Doctor**
+- Overview with real queue counts, cases awaiting review, processing failures and recent activity
+- Patient queue with search, filters, sorting and pagination
+- Case review that separates *patient-reported*, *document-extracted*, *auto-generated draft* and *clinician-confirmed* information
+- Missing-information and conflict checks with source references to the uploaded document
+- Accept / return / save draft, with edits persisted and review timestamps shown
+- Full visit history per patient
+
+## Screenshots
+
+All data shown is synthetic demo data (prefixed `[DEMO]`).
+
+| Landing page | Doctor overview |
+|---|---|
+| ![Landing](docs/screenshots/landing.png) | ![Overview](docs/screenshots/doctor-overview.png) |
+| **Patient queue** | **Case review** |
+| ![Queue](docs/screenshots/doctor-queue.png) | ![Case review](docs/screenshots/case-review.png) |
+
+<p align="center"><img src="docs/screenshots/mobile-queue.png" width="260" alt="Mobile queue"></p>
+
+## Architecture
 
 | Part | Stack | Folder |
 |---|---|---|
@@ -13,6 +50,26 @@ clinician reviews, corrects and accepts. Drafts are never presented as a diagnos
 | Backend API | FastAPI, SQLAlchemy 2, Argon2, JWT | `backend/` |
 | Database | MySQL 8 (production) or SQLite (local development) | `sql/`, `backend/init_db.py` |
 | Documents | Text-layer PDFs via `pypdf`; images/scanned PDFs need optional PaddleOCR | `backend/app/services/` |
+
+```
+Patient (browser) ──► Next.js frontend ──► FastAPI API ──► MySQL / SQLite
+                                              │
+                                              ├─► document storage (private volume)
+                                              ├─► PDF text / OCR extraction
+                                              └─► OTP provider (MSG91)
+```
+
+## Project structure
+
+```
+app/            Next.js routes (landing, /patient/*, /doctor/*)
+components/     UI primitives (components/ui) and doctor/patient shells
+lib/            API client, interview question bank, translations, status helpers
+backend/app/    FastAPI app: routers, models, services (OCR, OTP, case summary), security
+backend/tests/  pytest suite (temporary SQLite DB, synthetic data)
+sql/            MySQL schema and upgrade scripts
+docs/           Screenshots
+```
 
 ## Local setup
 
@@ -123,3 +180,13 @@ The frontend and backend deploy **separately**; deploying one does not deploy th
 
 Still required before a real deployment: a MySQL instance, an SMS provider account,
 TLS/domains, a persistent document volume, and backups.
+
+## Demo login (local only)
+
+`python init_db.py --demo` (with `DEMO_MODE=true`) creates synthetic `[DEMO]` patients and
+a `demo-doctor` account and prints its random password once. There are no built-in
+default accounts. Never enable demo mode in production.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
