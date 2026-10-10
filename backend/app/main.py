@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import sys
 import uuid
 
@@ -10,7 +10,10 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 import app.models  # noqa: F401  (registers tables)
 from app.config import settings
-from app.db import check_database
+from contextlib import asynccontextmanager
+from app.db import Base, SessionLocal, engine, check_database
+from app.models import Hospital
+
 from app.routers import abdm, admin, ayush, fhir, identifiers, auth, clinical_extraction, clinical_history, doctor_workflow, documents, patient_otp, protected
 from app.services.ocr_service import available_engines
 
@@ -28,7 +31,29 @@ if problems:
     if settings.is_production:
         raise RuntimeError("Refusing to start with insecure production configuration.")
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Ensure database tables exist and default hospital is created
+    try:
+        Base.metadata.create_all(bind=engine)
+        with SessionLocal() as db:
+            hospital = db.query(Hospital).filter_by(hospital_code=settings.default_hospital_code).first()
+            if not hospital:
+                hospital = Hospital(
+                    hospital_code=settings.default_hospital_code,
+                    name="Janseva District Government Hospital",
+                    name_hi="जनसेवा जिला सरकारी अस्पताल",
+                    name_mr="जनसेवा जिल्हा सरकारी रुग्णालय",
+                )
+                db.add(hospital)
+                db.commit()
+        logger.info("Database schema initialized and verified.")
+    except Exception as e:
+        logger.error(f"Failed to auto-initialize DB schema: {e}")
+    yield
+
 app = FastAPI(
+    lifespan=lifespan,
     title=settings.app_name,
     version="1.0.0",
     docs_url=None if settings.is_production else "/docs",
