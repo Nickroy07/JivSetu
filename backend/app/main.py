@@ -12,7 +12,8 @@ import app.models  # noqa: F401  (registers tables)
 from app.config import settings
 from contextlib import asynccontextmanager
 from app.db import Base, SessionLocal, engine, check_database
-from app.models import Hospital
+from app.models import Hospital, User, Doctor
+from app.security import hash_password
 
 from app.routers import abdm, admin, ayush, fhir, identifiers, auth, clinical_extraction, clinical_history, doctor_workflow, documents, patient_otp, protected
 from app.services.ocr_service import available_engines
@@ -47,7 +48,38 @@ async def lifespan(app: FastAPI):
                 )
                 db.add(hospital)
                 db.commit()
-        logger.info("Database schema initialized and verified.")
+
+            # Ensure default doctor account exists
+            doctor_user = db.query(User).filter_by(user_code="dr-mehta").first()
+            if not doctor_user:
+                doctor_user = User(
+                    user_code="dr-mehta",
+                    password_hash=hash_password("Doctor@12345"),
+                    role="doctor",
+                    hospital_id=hospital.id,
+                    is_active=True,
+                )
+                db.add(doctor_user)
+                db.flush()
+                db.add(Doctor(user_id=doctor_user.id, full_name="Dr. Mehta", hospital_id=hospital.id))
+                db.commit()
+                logger.info("Default doctor account created: dr-mehta")
+
+            # Ensure default admin account exists
+            admin_user = db.query(User).filter_by(user_code="admin").first()
+            if not admin_user:
+                admin_user = User(
+                    user_code="admin",
+                    password_hash=hash_password("Admin@12345"),
+                    role="admin",
+                    hospital_id=hospital.id,
+                    is_active=True,
+                )
+                db.add(admin_user)
+                db.commit()
+                logger.info("Default admin account created: admin")
+
+        logger.info("Database schema and staff accounts verified.")
     except Exception as e:
         logger.error(f"Failed to auto-initialize DB schema: {e}")
     yield
