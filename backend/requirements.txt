@@ -2,6 +2,7 @@ fastapi==0.141.1
 uvicorn[standard]==0.52.4
 SQLAlchemy==2.0.52
 PyMySQL==1.2.0
+psycopg[binary]==3.2.13
 cryptography==50.0.1
 pydantic==2.13.5
 pydantic-settings==2.15.0

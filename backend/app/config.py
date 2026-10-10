@@ -20,6 +20,7 @@ class Settings(BaseSettings):
 
     # Full SQLAlchemy URL, e.g.
     #   mysql+pymysql://jivsetu:<password>@127.0.0.1:3306/jivsetu
+    #   postgresql+psycopg://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres
     #   sqlite:///./jivsetu_dev.db   (local development only)
     database_url: str
 
@@ -81,8 +82,8 @@ class Settings(BaseSettings):
         if self.is_production:
             if self.abdm_mode == "mock":
                 problems.append("ABDM_MODE=mock is not allowed in production.")
-            if self.database_backend == "sqlite":
-                problems.append("SQLite is not supported in production; set a MySQL DATABASE_URL.")
+            if self.database_backend not in ("mysql", "postgresql", "postgres"):
+                problems.append("Production requires a MySQL or PostgreSQL DATABASE_URL; SQLite is not supported.")
             if self.otp_provider == "dev":
                 problems.append("OTP_PROVIDER=dev is not allowed in production.")
             if self.demo_mode:

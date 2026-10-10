@@ -139,7 +139,6 @@ function Interview() {
             />
             <VoiceInput
               language={lang}
-              questionText={q.question[lang] ?? q.question.en}
               onTranscript={(t) => setText((prev) => (prev.trim() ? `${prev.trim()} ${t}` : t))}
             />
             <p className="text-sm text-slate-500">{tr("speak_or_type")}</p>

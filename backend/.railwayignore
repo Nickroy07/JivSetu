@@ -1,0 +1,15 @@
+# Keep local-only files out of the Railway build. Production configuration
+# comes from Railway service variables, never from a file in the image.
+.env
+.env.*
+!.env.example
+*.db
+.venv
+.venv-local
+.venv*/
+.pytest_cache/
+__pycache__/
+storage/
+*.log
+tests/
+legacy_web_app/

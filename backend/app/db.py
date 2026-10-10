@@ -3,7 +3,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 from app.config import settings
 
-# BIGINT primary keys on MySQL; SQLite only auto-increments INTEGER keys.
+# BIGINT primary keys on MySQL/PostgreSQL; SQLite only auto-increments INTEGER keys.
 BigIntId = BigInteger().with_variant(Integer, "sqlite")
 
 _is_sqlite = settings.database_url.startswith("sqlite")

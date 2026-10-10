@@ -49,3 +49,6 @@ __pycache__/
 /backend/*.db
 /backend/storage/
 /backend/*.log
+
+.vercel
+.env*

@@ -6,7 +6,7 @@ Create the Jivsetu schema and seed reference data.
                                            # create a staff account (prompts for password)
     python init_db.py --demo               # DEMO_MODE only: synthetic, clearly labelled records
 
-Safe to run repeatedly. Works with MySQL (production) and SQLite (local dev).
+Safe to run repeatedly. Works with MySQL or PostgreSQL (production) and SQLite (local dev).
 For an existing MySQL database created from the old sql/ scripts, apply
 sql/06_upgrade_v1.sql first.
 """
