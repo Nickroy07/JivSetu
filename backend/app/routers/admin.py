@@ -15,6 +15,7 @@ from app.models.hospital import Hospital
 from app.models.medical_document import MedicalDocument
 from app.models.patient_visit import PatientVisit
 from app.models.user import Doctor, User
+from app.services import abdm as abdm_service
 from app.services.ocr_service import available_engines
 from app.security import hash_password, require_roles, staff_hospital_id
 
@@ -215,7 +216,7 @@ def configuration(user=Depends(_admin)):
         "integrations": {
             "sms_otp": {"provider": settings.otp_provider, "configured": settings.otp_provider != "dev"},
             "ocr": {"engines": available_engines()},
-            "abdm": {"configured": False, "note": "ABDM integration is not implemented yet."},
+            "abdm": abdm_service.status(),
         },
         "max_upload_mb": settings.max_upload_mb,
     }

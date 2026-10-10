@@ -43,6 +43,13 @@ class Settings(BaseSettings):
 
     default_hospital_code: str = "JANSEVA-DGH"
 
+    # ABDM: disabled | mock | sandbox. "mock" never contacts ABDM; "sandbox" is pending
+    # official credentials and conformance, so no live exchange is implemented yet.
+    abdm_mode: str = "disabled"
+    abdm_client_id: str = ""
+    abdm_client_secret: str = ""
+    abdm_base_url: str = ""
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
 
     @field_validator("environment")
@@ -67,7 +74,13 @@ class Settings(BaseSettings):
         problems = []
         if len(self.jwt_secret_key) < 32 or "CHANGE" in self.jwt_secret_key.upper():
             problems.append("JWT_SECRET_KEY must be a random value of at least 32 characters.")
+        if self.abdm_mode not in ("disabled", "mock", "sandbox"):
+            problems.append("ABDM_MODE must be disabled, mock or sandbox.")
+        if self.abdm_mode == "sandbox" and not (self.abdm_client_id and self.abdm_client_secret and self.abdm_base_url):
+            problems.append("ABDM_MODE=sandbox requires ABDM_CLIENT_ID, ABDM_CLIENT_SECRET and ABDM_BASE_URL.")
         if self.is_production:
+            if self.abdm_mode == "mock":
+                problems.append("ABDM_MODE=mock is not allowed in production.")
             if self.database_backend == "sqlite":
                 problems.append("SQLite is not supported in production; set a MySQL DATABASE_URL.")
             if self.otp_provider == "dev":

@@ -13,6 +13,7 @@ os.environ.update(
     DOCUMENT_STORAGE_PATH=str(_tmp / "docs"),
     OTP_PROVIDER="dev",
     DEMO_MODE="false",
+    ABDM_MODE="mock",
 )
 
 from fastapi.testclient import TestClient  # noqa: E402

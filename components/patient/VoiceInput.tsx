@@ -119,6 +119,9 @@ export default function VoiceInput({
   const [voicesReady, setVoicesReady] =
     useState(false);
 
+  const [voiceNotice, setVoiceNotice] =
+    useState("");
+
   /*
    * ==========================================
    * LANGUAGE CODE
@@ -209,6 +212,19 @@ export default function VoiceInput({
       );
     };
   }, []);
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      !("speechSynthesis" in window) ||
+      !voicesReady
+    ) {
+      return;
+    }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- derived from browser voices
+    setVoiceNotice(resolveVoice(languageCode()).notice);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [language, voicesReady]);
 
   /*
    * ==========================================
@@ -305,8 +321,7 @@ export default function VoiceInput({
 
           return (
             value.includes("marathi") ||
-            value.includes("mr-in") ||
-            value.includes("mr")
+            value.includes("mr-in")
           );
         });
 
@@ -366,6 +381,69 @@ export default function VoiceInput({
       voices[0] ||
       null
     );
+  }
+
+  /*
+   * Decide which voice may be used for a language and
+   * whether the device can read it aloud at all.
+   *
+   * Reading Marathi or Hindi text with an English voice
+   * produces unintelligible speech, so in that case we
+   * do not speak and tell the user instead.
+   */
+  function resolveVoice(lang: string): {
+    voice: SpeechSynthesisVoice | null;
+    notice: string;
+    canSpeak: boolean;
+  } {
+    const voices =
+      voicesRef.current.length > 0
+        ? voicesRef.current
+        : window.speechSynthesis.getVoices();
+
+    // Voices not loaded yet: let the browser decide.
+    if (!voices.length) {
+      return { voice: null, notice: "", canSpeak: true };
+    }
+
+    const prefix = lang.split("-")[0].toLowerCase();
+    const nameMatch: Record<string, RegExp> = {
+      mr: /marathi/i,
+      hi: /hindi/i,
+    };
+    const forLanguage = (p: string) =>
+      voices.find(
+        (v) =>
+          v.lang.toLowerCase().replace("_", "-").startsWith(p) ||
+          nameMatch[p]?.test(v.name)
+      );
+
+    if (prefix === "en") {
+      return { voice: getBestVoice(lang), notice: "", canSpeak: true };
+    }
+
+    const own = forLanguage(prefix);
+    if (own) {
+      return { voice: own, notice: "", canSpeak: true };
+    }
+
+    if (prefix === "mr") {
+      const hindi = forLanguage("hi");
+      if (hindi) {
+        return {
+          voice: hindi,
+          notice:
+            "A Marathi voice is not installed on this device. The question is read with a Hindi voice, so some pronunciation may differ.",
+          canSpeak: true,
+        };
+      }
+    }
+
+    return {
+      voice: null,
+      notice: `A ${languageName()} voice is not installed on this device, so the question cannot be read aloud. You can read it on screen and answer by touch or typing.`,
+      canSpeak: false,
+    };
   }
 
   /*
@@ -497,6 +575,13 @@ export default function VoiceInput({
       return;
     }
 
+    const resolved = resolveVoice(languageCode());
+    setVoiceNotice(resolved.notice);
+
+    if (!resolved.canSpeak) {
+      return;
+    }
+
     /*
      * Cancel existing speech.
      */
@@ -529,8 +614,7 @@ export default function VoiceInput({
       /*
        * Select the best available voice.
        */
-      const voice =
-        getBestVoice(lang);
+      const voice = resolved.voice;
 
       if (voice) {
         utterance.voice = voice;
@@ -1127,6 +1211,15 @@ export default function VoiceInput({
               )}
 
           </div>
+
+          {voiceNotice && (
+            <p
+              role="status"
+              className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            >
+              {voiceNotice}
+            </p>
+          )}
 
           {/* Speaking status */}
 

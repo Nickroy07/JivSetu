@@ -136,6 +136,9 @@ production builds — the UI shows an explicit configuration error instead.
 | `/doctor/patient/[patient_id]` | Patient visit history |
 | `/fhir/visits/{id}/bundle` | FHIR R4 export for a visit (staff) — see [docs/FHIR.md](docs/FHIR.md) |
 | `/ayush/visits/{id}` | AYUSH assessment (Trividha / Ashtavidha / Dashavidha) — see [docs/AYUSH.md](docs/AYUSH.md) |
+| `/abdm/*` | ABDM adapter (mock only; live exchange pending) — see [docs/ABDM.md](docs/ABDM.md) |
+| `/identifiers/*`, `/patient/scan` | Card / QR identification (OTP still required) |
+| Interview voice (TTS) | English / Hindi / Marathi playback with voice detection and fallback — see [docs/TTS.md](docs/TTS.md) |
 | `/admin` | Administration (admin role only): overview, staff management, audit log, hospital settings |
 
 Main API groups: `/auth`, `/auth/patient` (OTP), `/patient`, `/documents`, `/doctor`

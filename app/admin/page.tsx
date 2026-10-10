@@ -323,7 +323,7 @@ function AuditLog({ token }: { token: string }) {
 interface HospitalData { hospital_code: string; name: string; name_hi: string | null; name_mr: string | null }
 interface ConfigData {
   languages: { code: string; label: string }[];
-  integrations: { sms_otp: { provider: string; configured: boolean }; abdm: { configured: boolean; note: string } };
+  integrations: { sms_otp: { provider: string; configured: boolean }; abdm: { mode: string; live_exchange_available: boolean } };
   max_upload_mb: number;
 }
 
@@ -378,7 +378,7 @@ function Settings({ token }: { token: string }) {
           <dl className="mt-4 space-y-3 text-sm">
             <Row label="Languages">{config.data.languages.map((l) => <Badge key={l.code}>{l.label}</Badge>)}</Row>
             <Row label="SMS OTP"><Badge tone={config.data.integrations.sms_otp.configured ? "success" : "warning"}>{config.data.integrations.sms_otp.configured ? config.data.integrations.sms_otp.provider : "not configured (dev OTP)"}</Badge></Row>
-            <Row label="ABDM"><Badge tone="neutral">not configured</Badge></Row>
+            <Row label="ABDM"><Badge tone={config.data.integrations.abdm.mode === "mock" ? "warning" : "neutral"}>{config.data.integrations.abdm.mode === "mock" ? "mock (simulation only)" : config.data.integrations.abdm.mode}</Badge><Badge tone="neutral">live exchange pending</Badge></Row>
             <Row label="Max upload"><span>{config.data.max_upload_mb} MB</span></Row>
             <p className="text-xs text-slate-500">Secrets and keys are set in the server environment and are never shown here.</p>
           </dl>

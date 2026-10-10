@@ -28,8 +28,8 @@ CREATE TABLE IF NOT EXISTS otp_challenges (
 	PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE INDEX ix_otp_challenges_mobile ON otp_challenges (mobile);
 CREATE INDEX ix_otp_challenges_created_at ON otp_challenges (created_at);
+CREATE INDEX ix_otp_challenges_mobile ON otp_challenges (mobile);
 
 CREATE TABLE IF NOT EXISTS revoked_tokens (
 	jti VARCHAR(64) NOT NULL, 
@@ -107,6 +107,41 @@ CREATE TABLE IF NOT EXISTS patients (
 
 CREATE UNIQUE INDEX ix_patients_mobile ON patients (mobile);
 
+CREATE TABLE IF NOT EXISTS abha_links (
+	id BIGINT NOT NULL AUTO_INCREMENT, 
+	patient_id BIGINT NOT NULL, 
+	abha_number VARCHAR(14) NOT NULL, 
+	abha_address VARCHAR(100), 
+	verified BOOL NOT NULL, 
+	verification_source VARCHAR(20) NOT NULL, 
+	linked_by BIGINT, 
+	created_at DATETIME NOT NULL DEFAULT now(), 
+	updated_at DATETIME NOT NULL DEFAULT now(), 
+	PRIMARY KEY (id), 
+	UNIQUE (patient_id), 
+	FOREIGN KEY(patient_id) REFERENCES patients (id) ON DELETE CASCADE, 
+	FOREIGN KEY(linked_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS patient_identifiers (
+	id BIGINT NOT NULL AUTO_INCREMENT, 
+	patient_id BIGINT NOT NULL, 
+	kind VARCHAR(10) NOT NULL, 
+	token_hash VARCHAR(64) NOT NULL, 
+	is_active BOOL NOT NULL, 
+	issued_by BIGINT, 
+	created_at DATETIME NOT NULL DEFAULT now(), 
+	last_used_at DATETIME, 
+	deactivated_at DATETIME, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(patient_id) REFERENCES patients (id) ON DELETE CASCADE, 
+	UNIQUE (token_hash), 
+	FOREIGN KEY(issued_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX ix_patient_identifiers_patient_id ON patient_identifiers (patient_id);
+
 CREATE TABLE IF NOT EXISTS patient_visits (
 	id BIGINT NOT NULL AUTO_INCREMENT, 
 	patient_id BIGINT NOT NULL, 
@@ -121,10 +156,10 @@ CREATE TABLE IF NOT EXISTS patient_visits (
 	FOREIGN KEY(hospital_id) REFERENCES hospitals (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE INDEX ix_patient_visits_status ON patient_visits (status);
 CREATE INDEX ix_patient_visits_hospital_id ON patient_visits (hospital_id);
 CREATE INDEX ix_patient_visits_visit_date ON patient_visits (visit_date);
 CREATE INDEX ix_patient_visits_patient_id ON patient_visits (patient_id);
-CREATE INDEX ix_patient_visits_status ON patient_visits (status);
 
 CREATE TABLE IF NOT EXISTS ayush_assessments (
 	id BIGINT NOT NULL AUTO_INCREMENT, 
@@ -186,9 +221,9 @@ CREATE TABLE IF NOT EXISTS consents (
 	FOREIGN KEY(visit_id) REFERENCES patient_visits (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE INDEX ix_consents_visit_id ON consents (visit_id);
 CREATE INDEX ix_consents_patient_id ON consents (patient_id);
 CREATE INDEX ix_consents_created_at ON consents (created_at);
+CREATE INDEX ix_consents_visit_id ON consents (visit_id);
 
 CREATE TABLE IF NOT EXISTS medical_documents (
 	id BIGINT NOT NULL AUTO_INCREMENT, 
@@ -214,9 +249,9 @@ CREATE TABLE IF NOT EXISTS medical_documents (
 	FOREIGN KEY(visit_id) REFERENCES patient_visits (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE INDEX ix_medical_documents_sha256 ON medical_documents (sha256);
 CREATE INDEX ix_medical_documents_patient_id ON medical_documents (patient_id);
 CREATE INDEX ix_medical_documents_visit_id ON medical_documents (visit_id);
+CREATE INDEX ix_medical_documents_sha256 ON medical_documents (sha256);
 
 CREATE TABLE IF NOT EXISTS clinical_document_extractions (
 	id BIGINT NOT NULL AUTO_INCREMENT, 

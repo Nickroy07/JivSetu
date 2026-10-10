@@ -11,3 +11,4 @@ from app.models.revoked_token import RevokedToken
 from app.models.consent import Consent
 from app.models.ayush_assessment import AyushAssessment
 from app.models.patient_identifier import PatientIdentifier
+from app.models.abha_link import AbhaLink

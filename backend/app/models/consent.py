@@ -3,7 +3,7 @@ from sqlalchemy.sql import func
 
 from app.db import Base, BigIntId
 
-CONSENT_PURPOSES = ("case_taking", "document_processing", "clinician_access", "voice_input")
+CONSENT_PURPOSES = ("case_taking", "document_processing", "clinician_access", "voice_input", "abdm_sharing")
 
 
 class Consent(Base):

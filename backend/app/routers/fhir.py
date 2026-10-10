@@ -40,9 +40,8 @@ def mapping_info():
     }
 
 
-@router.get("/visits/{visit_id}/bundle")
-def visit_bundle(visit_id: int, user=Depends(require_staff), db: Session = Depends(get_db)):
-    """FHIR R4 collection Bundle for one visit. Staff only, limited to their own hospital."""
+def build_visit_export(db: Session, visit_id: int, user: dict) -> dict:
+    """Validated FHIR Bundle for a visit the staff member may access. Raises HTTPException otherwise."""
     visit = db.get(PatientVisit, visit_id)
     if not visit:
         raise HTTPException(status_code=404, detail="Visit not found.")
@@ -68,6 +67,13 @@ def visit_bundle(visit_id: int, user=Depends(require_staff), db: Session = Depen
         logger.error("FHIR export failed validation for visit %s: %d issue(s)", visit_id, len(exc.issues))
         raise HTTPException(status_code=500, detail={"message": "The record could not be exported as valid FHIR.", "issues": exc.issues[:10]})
 
+    return bundle
+
+
+@router.get("/visits/{visit_id}/bundle")
+def visit_bundle(visit_id: int, user=Depends(require_staff), db: Session = Depends(get_db)):
+    """FHIR R4 collection Bundle for one visit. Staff only, limited to their own hospital."""
+    bundle = build_visit_export(db, visit_id, user)
     audit.record(db, user, "fhir.export", "visit", visit_id, f"mapping={MAPPING_VERSION}")
     db.commit()
     return JSONResponse(content=bundle, media_type="application/fhir+json")
