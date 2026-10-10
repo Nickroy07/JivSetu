@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     otp_expire_minutes: int = 10
     otp_max_attempts: int = 5
     otp_max_sends_per_window: int = 5
+    # Set ALLOW_DEV_OTP_IN_PRODUCTION=true to bypass the dev-OTP production guard
+    # while SMS credentials are being provisioned. Remove once MSG91 is configured.
+    allow_dev_otp_in_production: bool = False
 
     # Enables seeding of clearly-labelled synthetic demo accounts.
     demo_mode: bool = False
@@ -84,8 +87,8 @@ class Settings(BaseSettings):
                 problems.append("ABDM_MODE=mock is not allowed in production.")
             if self.database_backend not in ("mysql", "postgresql", "postgres"):
                 problems.append("Production requires a MySQL or PostgreSQL DATABASE_URL; SQLite is not supported.")
-            if self.otp_provider == "dev":
-                problems.append("OTP_PROVIDER=dev is not allowed in production.")
+            if self.otp_provider == "dev" and not self.allow_dev_otp_in_production:
+                problems.append("OTP_PROVIDER=dev is not allowed in production. Set ALLOW_DEV_OTP_IN_PRODUCTION=true to override temporarily.")
             if self.demo_mode:
                 problems.append("DEMO_MODE must be false in production.")
             if any("localhost" in o or "127.0.0.1" in o for o in self.cors_origin_list):
