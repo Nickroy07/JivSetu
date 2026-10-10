@@ -134,6 +134,9 @@ production builds — the UI shows an explicit configuration error instead.
 | `/doctor/queue` | Search, filter, sort and paginate cases |
 | `/doctor/cases/[visit_id]` | Case review: patient-reported vs clinician-confirmed values, missing info, conflicts, documents with source references, accept / return / save draft |
 | `/doctor/patient/[patient_id]` | Patient visit history |
+| `/fhir/visits/{id}/bundle` | FHIR R4 export for a visit (staff) — see [docs/FHIR.md](docs/FHIR.md) |
+| `/ayush/visits/{id}` | AYUSH assessment (Trividha / Ashtavidha / Dashavidha) — see [docs/AYUSH.md](docs/AYUSH.md) |
+| `/admin` | Administration (admin role only): overview, staff management, audit log, hospital settings |
 
 Main API groups: `/auth`, `/auth/patient` (OTP), `/patient`, `/documents`, `/doctor`
 (staff only), `/clinical-history`.
@@ -160,6 +163,24 @@ npx tsc --noEmit && npm run lint && npm run build
 
 See `backend/security-roadmap.md` for what is not yet implemented (shared/multi-instance rate limiting,
 encryption at rest, consent management, formal compliance review).
+
+## Roles and permissions
+
+| Capability | Patient | Doctor | Admin |
+|---|---|---|---|
+| Own visits, documents, consent | yes | no | no |
+| Doctor queue, case review, accept / return | no | own hospital | own hospital |
+| Patient records | own only | only patients with a visit at their hospital | same as doctor |
+| `/admin/*` (staff, audit, hospital, config) | no | no (403) | own hospital |
+
+Enforced on the server for every request: signature and expiry, **logout revocation** (`POST /auth/logout`
+stores the token ID in `revoked_tokens`), account still active (deactivating a user ends their session
+immediately), role, and hospital. Browser storage or URL changes cannot grant access.
+
+Consent is a patient-facing, append-only ledger (`consents`): `POST /patient/consent`, `GET /patient/consent`.
+The interview cannot start without `case_taking` consent.
+
+Existing databases: apply `sql/07_upgrade_v1_1.sql` (or run `python init_db.py`, which creates missing tables).
 
 ## Deployment
 

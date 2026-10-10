@@ -23,7 +23,7 @@ export default function ConsentPage() {
 }
 
 function Consent() {
-  const { tr } = usePatientLang();
+  const { tr, lang } = usePatientLang();
   const router = useRouter();
   const session = usePatientSession();
   const [agreed, setAgreed] = useState(false);
@@ -35,6 +35,15 @@ function Consent() {
     setLoading(true);
     setError(null);
     try {
+      await api("/patient/consent", {
+        method: "POST",
+        token: session.token,
+        json: {
+          visit_id: session.visitId,
+          language: lang,
+          purposes: { case_taking: true, document_processing: true, clinician_access: true, voice_input: true },
+        },
+      });
       await api(`/patient/visits/${session.visitId}/start-interview`, { method: "POST", token: session.token });
       saveDraft(`consent.${session.visitId}`, { agreedAt: new Date().toISOString(), version: "1.0" });
       router.push("/patient/interview");

@@ -3,6 +3,8 @@
 | File | Use |
 |---|---|
 | `00_schema_mysql.sql` | **Fresh install.** Generated from `backend/app/models`. |
+| `08_upgrade_ayush.sql` | Adds `ayush_assessments` (apply after 07 if upgrading). |
+| `07_upgrade_v1_1.sql` | Adds `revoked_tokens` and `consents` (apply after 06 if upgrading). |
 | `06_upgrade_v1.sql` | One-time upgrade for databases created by the legacy scripts. |
 | `01_schema.sql`, `04_*`, `05_*` | Legacy (pre-v1). Kept for reference; do not use for new installs. |
 

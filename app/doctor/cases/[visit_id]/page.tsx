@@ -17,6 +17,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DocumentPanel from "@/components/doctor/DocumentPanel";
+import AssessmentForm, { type AyushLang } from "@/components/ayush/AssessmentForm";
 import DoctorShell, { useStaff } from "@/components/doctor/DoctorShell";
 import Alert from "@/components/ui/Alert";
 import Badge from "@/components/ui/Badge";
@@ -46,7 +47,29 @@ export default function CasePage() {
 
 function CaseContent() {
   const { visit_id } = useParams<{ visit_id: string }>();
-  const { token } = useStaff();
+  const { token, role } = useStaff();
+  const [ayushLang, setAyushLang] = useState<AyushLang>("en");
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  async function exportFhir() {
+    setExporting(true);
+    setExportError(null);
+    try {
+      const bundle = await api<unknown>(`/fhir/visits/${visit_id}/bundle`, { token });
+      const url = URL.createObjectURL(new Blob([JSON.stringify(bundle, null, 2)], { type: "application/fhir+json" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `jivsetu-visit-${visit_id}-fhir.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(errorMessage(err));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const draftKey = `review.${visit_id}`;
 
   const [data, setData] = useState<CompleteCase | null>(null);
@@ -353,6 +376,30 @@ function CaseContent() {
               </div>
             )}
           </Card>
+
+          <Card>
+            <CardHeader
+              title="AYUSH assessment"
+              description="Structured Trividha, Ashtavidha and Dashavidha documentation. No score or diagnosis is generated."
+              actions={
+                <div className="flex gap-1" role="group" aria-label="Assessment language">
+                  {(["en", "hi", "mr"] as const).map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => setAyushLang(l)}
+                      aria-pressed={ayushLang === l}
+                      className={`rounded-md px-2 py-1 text-xs font-medium ${ayushLang === l ? "bg-brand-50 text-brand-800" : "text-slate-600 hover:bg-slate-100"}`}
+                    >
+                      {l.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              }
+            />
+            <CardBody>
+              <AssessmentForm visitId={visit_id} token={token} lang={ayushLang} canVerify={role === "doctor"} />
+            </CardBody>
+          </Card>
         </div>
 
         {/* Review panel */}
@@ -408,6 +455,15 @@ function CaseContent() {
                       </p>
                     </div>
                   )}
+                  <div className="mt-4 border-t border-slate-100 pt-4">
+                    <Button variant="outline" size="sm" className="w-full" onClick={exportFhir} loading={exporting}>
+                      Export FHIR R4 (JSON)
+                    </Button>
+                    {exportError && <p className="mt-2 text-xs text-rose-700">{exportError}</p>}
+                    <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                      Draft export for interoperability. Unreviewed items are marked unconfirmed or preliminary.
+                    </p>
+                  </div>
                 </>
               ) : (
                 <p className="text-sm text-slate-500">Review becomes available once the patient submits the interview.</p>

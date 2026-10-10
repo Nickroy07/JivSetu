@@ -5,9 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import PatientShell, { usePatientLang } from "@/components/patient/PatientShell";
 import { usePatientSession } from "@/components/patient/usePatientSession";
-import Button from "@/components/ui/Button";
+import Button, { LinkButton } from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import { clearPatientFlow, loadDraft } from "@/lib/session";
+
+const AYUSH_LINK = {
+  en: "Answer optional Ayurvedic questions",
+  hi: "आयुर्वेदिक प्रश्नों के उत्तर दें (वैकल्पिक)",
+  mr: "आयुर्वेदिक प्रश्नांची उत्तरे द्या (ऐच्छिक)",
+} as const;
 
 export default function CompletePage() {
   return (
@@ -18,7 +24,7 @@ export default function CompletePage() {
 }
 
 function Complete() {
-  const { tr } = usePatientLang();
+  const { tr, lang } = usePatientLang();
   const router = useRouter();
   const session = usePatientSession();
   const [result, setResult] = useState<{ missing: string[]; urgent: boolean } | null>(null);
@@ -67,10 +73,14 @@ function Complete() {
         )}
       </Card>
 
+      <LinkButton href="/patient/ayush" size="lg" variant="secondary" className="mx-auto mt-8 w-full max-w-md">
+        {AYUSH_LINK[lang]}
+      </LinkButton>
+
       <Button
         size="xl"
         variant="outline"
-        className="mx-auto mt-8 w-full max-w-md"
+        className="mx-auto mt-4 w-full max-w-md"
         onClick={() => {
           clearPatientFlow();
           router.replace("/");

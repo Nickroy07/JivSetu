@@ -11,7 +11,7 @@ from app.models.clinical_history import ClinicalHistory
 from app.models.medical_document import MedicalDocument
 from app.models.patient import Patient
 from app.models.patient_visit import VISIT_STATUSES, PatientVisit
-from app.security import require_staff
+from app.security import ensure_patient_access, require_staff, staff_hospital_id
 
 router = APIRouter(prefix="/doctor", tags=["Doctor Workflow"], dependencies=[Depends(require_staff)])
 
@@ -70,15 +70,16 @@ def _case_row(visit: PatientVisit, patient: Patient, history: Optional[ClinicalH
 
 
 @router.get("/overview")
-def overview(db: Session = Depends(get_db)):
-    status_rows = db.query(PatientVisit.status, func.count(PatientVisit.id)).group_by(PatientVisit.status).all()
+def overview(user=Depends(require_staff), db: Session = Depends(get_db)):
+    hid = staff_hospital_id(user)
+    status_rows = db.query(PatientVisit.status, func.count(PatientVisit.id)).filter(PatientVisit.hospital_id == hid).group_by(PatientVisit.status).all()
     by_status = {s: 0 for s in VISIT_STATUSES} | {s: int(c) for s, c in status_rows}
 
-    today_total = db.query(func.count(PatientVisit.id)).filter(PatientVisit.visit_date == date.today()).scalar() or 0
+    today_total = db.query(func.count(PatientVisit.id)).filter(PatientVisit.visit_date == date.today(), PatientVisit.hospital_id == hid).scalar() or 0
     awaiting_review = (
         db.query(func.count(ClinicalHistory.id))
         .join(PatientVisit, PatientVisit.id == ClinicalHistory.visit_id)
-        .filter(ClinicalHistory.physician_status == "pending", PatientVisit.status == "ready_for_review")
+        .filter(ClinicalHistory.physician_status == "pending", PatientVisit.status == "ready_for_review", PatientVisit.hospital_id == hid)
         .scalar()
         or 0
     )
@@ -86,24 +87,32 @@ def overview(db: Session = Depends(get_db)):
     failed_docs = (
         db.query(MedicalDocument, Patient)
         .join(Patient, Patient.id == MedicalDocument.patient_id)
-        .filter(MedicalDocument.upload_status == "failed")
+        .join(PatientVisit, PatientVisit.id == MedicalDocument.visit_id)
+        .filter(MedicalDocument.upload_status == "failed", PatientVisit.hospital_id == hid)
         .order_by(MedicalDocument.updated_at.desc())
         .limit(5)
         .all()
     )
-    failed_total = db.query(func.count(MedicalDocument.id)).filter(MedicalDocument.upload_status == "failed").scalar() or 0
+    failed_total = (
+        db.query(func.count(MedicalDocument.id))
+        .join(PatientVisit, PatientVisit.id == MedicalDocument.visit_id)
+        .filter(MedicalDocument.upload_status == "failed", PatientVisit.hospital_id == hid)
+        .scalar()
+        or 0
+    )
 
     recent = (
         db.query(PatientVisit, Patient, ClinicalHistory)
         .join(Patient, Patient.id == PatientVisit.patient_id)
         .outerjoin(ClinicalHistory, ClinicalHistory.visit_id == PatientVisit.id)
+        .filter(PatientVisit.hospital_id == hid)
         .order_by(PatientVisit.updated_at.desc(), PatientVisit.id.desc())
         .limit(6)
         .all()
     )
     docs = _doc_counts(db, [int(p.id) for _, p, _ in recent])
 
-    activity = db.query(AuditLog).filter(AuditLog.action != "auth.login").order_by(AuditLog.id.desc()).limit(10).all()
+    activity = db.query(AuditLog).filter(AuditLog.action.notin_(("auth.login", "auth.logout")), AuditLog.hospital_id == hid).order_by(AuditLog.id.desc()).limit(10).all()
 
     return {
         "counts": {
@@ -158,8 +167,10 @@ def get_doctor_queue(
     sort: str = Query("updated_desc"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
+    user=Depends(require_staff),
     db: Session = Depends(get_db),
 ):
+    hid = staff_hospital_id(user)
     if status and status not in VISIT_STATUSES:
         raise HTTPException(status_code=422, detail="Unknown status filter.")
     if sort not in SORTS:
@@ -169,6 +180,7 @@ def get_doctor_queue(
         db.query(PatientVisit, Patient, ClinicalHistory)
         .join(Patient, Patient.id == PatientVisit.patient_id)
         .outerjoin(ClinicalHistory, ClinicalHistory.visit_id == PatientVisit.id)
+        .filter(PatientVisit.hospital_id == hid)
     )
     if scope == "today":
         query = query.filter(PatientVisit.visit_date == date.today())
@@ -200,14 +212,15 @@ def get_doctor_queue(
 
 
 @router.get("/patients/{patient_id}")
-def get_doctor_patient(patient_id: int, db: Session = Depends(get_db)):
+def get_doctor_patient(patient_id: int, user=Depends(require_staff), db: Session = Depends(get_db)):
+    ensure_patient_access(user, patient_id)
     patient = db.get(Patient, patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found.")
     visits = (
         db.query(PatientVisit, ClinicalHistory)
         .outerjoin(ClinicalHistory, ClinicalHistory.visit_id == PatientVisit.id)
-        .filter(PatientVisit.patient_id == patient_id)
+        .filter(PatientVisit.patient_id == patient_id, PatientVisit.hospital_id == staff_hospital_id(user))
         .order_by(PatientVisit.visit_date.desc(), PatientVisit.id.desc())
         .all()
     )

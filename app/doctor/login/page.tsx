@@ -21,7 +21,7 @@ interface LoginResponse {
 }
 
 function safeNext(next: string | null) {
-  return next && next.startsWith("/doctor") && !next.startsWith("/doctor/login") ? next : "/doctor";
+  return next && (next.startsWith("/doctor") || next.startsWith("/admin")) && !next.startsWith("/doctor/login") ? next : null;
 }
 
 function LoginForm() {
@@ -34,7 +34,8 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (getStaffSession()) router.replace(next);
+    const existing = getStaffSession();
+    if (existing) router.replace(next ?? (existing.role === "admin" ? "/admin" : "/doctor"));
   }, [router, next]);
 
   async function submit(e: FormEvent) {
@@ -55,7 +56,7 @@ function LoginForm() {
         displayName: res.display_name || res.user_id,
         expiresAt: Date.now() + res.expires_in * 1000 - 30_000,
       });
-      router.replace(next);
+      router.replace(next ?? (res.role === "admin" ? "/admin" : "/doctor"));
     } catch (err) {
       setError(errorMessage(err));
       setLoading(false);

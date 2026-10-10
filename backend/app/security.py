@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -8,6 +9,7 @@ from jwt.exceptions import InvalidTokenError
 from pwdlib import PasswordHash
 
 from app.config import settings
+from app.db import SessionLocal
 
 password_hash = PasswordHash.recommended()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
@@ -43,6 +45,7 @@ def create_access_token(
         "uid": uid,
         "role": role,
         "hospital_id": hospital_id,
+        "jti": uuid.uuid4().hex,
         "iat": now,
         "exp": now + timedelta(minutes=expires_minutes or settings.access_token_expire_minutes),
     }
@@ -59,6 +62,19 @@ def _unauthorized(detail: str = "Authentication required.") -> HTTPException:
     )
 
 
+def _session_is_valid(payload: dict[str, Any]) -> bool:
+    """Server-side checks a signed token alone cannot give: logout revocation and deactivation."""
+    from app.models.revoked_token import RevokedToken
+    from app.models.user import User
+
+    with SessionLocal() as db:
+        jti = payload.get("jti")
+        if jti and db.get(RevokedToken, jti):
+            return False
+        user = db.get(User, int(payload["uid"]))
+        return bool(user and user.is_active)
+
+
 def get_current_user(token: str | None = Depends(oauth2_scheme)) -> dict[str, Any]:
     if not token:
         raise _unauthorized()
@@ -68,6 +84,8 @@ def get_current_user(token: str | None = Depends(oauth2_scheme)) -> dict[str, An
         raise _unauthorized("Your session has expired. Please sign in again.")
     if not payload.get("sub") or not payload.get("role") or payload.get("uid") is None:
         raise _unauthorized("Invalid authentication token.")
+    if not _session_is_valid(payload):
+        raise _unauthorized("Your session has ended. Please sign in again.")
     return payload
 
 
@@ -87,11 +105,28 @@ def is_staff(user: dict[str, Any]) -> bool:
     return user.get("role") in STAFF_ROLES
 
 
+def staff_hospital_id(user: dict[str, Any]) -> int:
+    """Hospital a staff member is assigned to; staff without one cannot read patient records."""
+    hospital_id = user.get("hospital_id")
+    if hospital_id is None:
+        raise HTTPException(status_code=403, detail="Your account is not assigned to a hospital.")
+    return int(hospital_id)
+
+
 def ensure_patient_access(user: dict[str, Any], patient_id: int) -> None:
-    """Staff may access any patient; a patient may access only their own record."""
-    if is_staff(user):
-        return
+    """A patient may access only their own record; staff only patients with a visit at their hospital."""
     if user.get("role") == "patient" and int(user.get("patient_id") or 0) == int(patient_id):
         return
+    if is_staff(user) and user.get("hospital_id") is not None:
+        from app.models.patient_visit import PatientVisit
+
+        with SessionLocal() as db:
+            seen = (
+                db.query(PatientVisit.id)
+                .filter(PatientVisit.patient_id == int(patient_id), PatientVisit.hospital_id == int(user["hospital_id"]))
+                .first()
+            )
+        if seen:
+            return
     # 404 rather than 403 so record existence is not disclosed.
     raise HTTPException(status_code=404, detail="Record not found.")

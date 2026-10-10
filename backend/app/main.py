@@ -11,7 +11,7 @@ from sqlalchemy.exc import OperationalError, SQLAlchemyError
 import app.models  # noqa: F401  (registers tables)
 from app.config import settings
 from app.db import check_database
-from app.routers import auth, clinical_extraction, clinical_history, doctor_workflow, documents, patient_otp, protected
+from app.routers import admin, ayush, fhir, identifiers, auth, clinical_extraction, clinical_history, doctor_workflow, documents, patient_otp, protected
 from app.services.ocr_service import available_engines
 
 logging.basicConfig(
@@ -117,3 +117,7 @@ app.include_router(documents.router)
 app.include_router(clinical_extraction.router)
 app.include_router(doctor_workflow.router)
 app.include_router(clinical_history.router)
+app.include_router(admin.router)
+app.include_router(fhir.router)
+app.include_router(ayush.router)
+app.include_router(identifiers.router)

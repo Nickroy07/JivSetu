@@ -38,6 +38,9 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(
     (expired = false) => {
+      const current = getStaffSession();
+      // Revoke the token server-side too; a failed call must not block sign-out.
+      if (current && !expired) api("/auth/logout", { method: "POST", token: current.token }).catch(() => undefined);
       setStaffSession(null);
       router.replace(`/doctor/login?next=${encodeURIComponent(pathname)}${expired ? "&expired=1" : ""}`);
     },
@@ -54,6 +57,8 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
     setSession(s);
     setChecked(true);
     setUnauthorizedHandler(() => signOut(true));
+    // Confirms the token is still valid server-side (not revoked, account still active).
+    api("/auth/me", { token: s.token }).catch(() => undefined);
     api<Health>("/health").then(setHealth).catch(() => setHealth(null));
     return () => setUnauthorizedHandler(null);
   }, [signOut]);

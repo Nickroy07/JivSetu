@@ -1,4 +1,4 @@
--- GENERATED from backend/app/models by the command in sql/README.md. Do not edit by hand.
+-- GENERATED from backend/app/models by backend/scripts/dump_mysql_schema.py. Do not edit by hand.
 -- Fresh install: mysql -u root -p < sql/00_schema_mysql.sql   (or run: python backend/init_db.py)
 CREATE DATABASE IF NOT EXISTS jivsetu CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE jivsetu;
@@ -31,6 +31,15 @@ CREATE TABLE IF NOT EXISTS otp_challenges (
 CREATE INDEX ix_otp_challenges_mobile ON otp_challenges (mobile);
 CREATE INDEX ix_otp_challenges_created_at ON otp_challenges (created_at);
 
+CREATE TABLE IF NOT EXISTS revoked_tokens (
+	jti VARCHAR(64) NOT NULL, 
+	expires_at DATETIME NOT NULL, 
+	revoked_at DATETIME NOT NULL DEFAULT now(), 
+	PRIMARY KEY (jti)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX ix_revoked_tokens_expires_at ON revoked_tokens (expires_at);
+
 CREATE TABLE IF NOT EXISTS users (
 	id BIGINT NOT NULL AUTO_INCREMENT, 
 	user_code VARCHAR(100) NOT NULL, 
@@ -45,8 +54,8 @@ CREATE TABLE IF NOT EXISTS users (
 	FOREIGN KEY(hospital_id) REFERENCES hospitals (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE INDEX ix_users_hospital_id ON users (hospital_id);
 CREATE INDEX ix_users_role ON users (`role`);
+CREATE INDEX ix_users_hospital_id ON users (hospital_id);
 
 CREATE TABLE IF NOT EXISTS audit_logs (
 	id BIGINT NOT NULL AUTO_INCREMENT, 
@@ -113,9 +122,31 @@ CREATE TABLE IF NOT EXISTS patient_visits (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX ix_patient_visits_hospital_id ON patient_visits (hospital_id);
-CREATE INDEX ix_patient_visits_patient_id ON patient_visits (patient_id);
 CREATE INDEX ix_patient_visits_visit_date ON patient_visits (visit_date);
+CREATE INDEX ix_patient_visits_patient_id ON patient_visits (patient_id);
 CREATE INDEX ix_patient_visits_status ON patient_visits (status);
+
+CREATE TABLE IF NOT EXISTS ayush_assessments (
+	id BIGINT NOT NULL AUTO_INCREMENT, 
+	patient_id BIGINT NOT NULL, 
+	visit_id BIGINT NOT NULL, 
+	module VARCHAR(20) NOT NULL, 
+	data JSON NOT NULL, 
+	sources JSON NOT NULL, 
+	history JSON NOT NULL, 
+	review_status VARCHAR(20) NOT NULL, 
+	reviewed_by VARCHAR(100), 
+	reviewed_at DATETIME, 
+	created_at DATETIME NOT NULL DEFAULT now(), 
+	updated_at DATETIME NOT NULL DEFAULT now(), 
+	PRIMARY KEY (id), 
+	CONSTRAINT uq_ayush_visit_module UNIQUE (visit_id, module), 
+	FOREIGN KEY(patient_id) REFERENCES patients (id) ON DELETE CASCADE, 
+	FOREIGN KEY(visit_id) REFERENCES patient_visits (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX ix_ayush_assessments_patient_id ON ayush_assessments (patient_id);
+CREATE INDEX ix_ayush_assessments_visit_id ON ayush_assessments (visit_id);
 
 CREATE TABLE IF NOT EXISTS clinical_histories (
 	id BIGINT NOT NULL AUTO_INCREMENT, 
@@ -140,6 +171,24 @@ CREATE TABLE IF NOT EXISTS clinical_histories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE INDEX ix_clinical_histories_patient_id ON clinical_histories (patient_id);
+
+CREATE TABLE IF NOT EXISTS consents (
+	id BIGINT NOT NULL AUTO_INCREMENT, 
+	patient_id BIGINT NOT NULL, 
+	visit_id BIGINT, 
+	purpose VARCHAR(40) NOT NULL, 
+	granted BOOL NOT NULL, 
+	text_version VARCHAR(20) NOT NULL, 
+	language VARCHAR(5), 
+	created_at DATETIME NOT NULL DEFAULT now(), 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(patient_id) REFERENCES patients (id) ON DELETE CASCADE, 
+	FOREIGN KEY(visit_id) REFERENCES patient_visits (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE INDEX ix_consents_visit_id ON consents (visit_id);
+CREATE INDEX ix_consents_patient_id ON consents (patient_id);
+CREATE INDEX ix_consents_created_at ON consents (created_at);
 
 CREATE TABLE IF NOT EXISTS medical_documents (
 	id BIGINT NOT NULL AUTO_INCREMENT, 

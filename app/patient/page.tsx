@@ -1,12 +1,18 @@
 "use client";
 
-import { ArrowRight, Clock, Mic, Stethoscope } from "lucide-react";
+import { ArrowRight, Clock, Mic, ScanLine, Stethoscope } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import PatientShell, { PatientHeading, usePatientLang } from "@/components/patient/PatientShell";
 import Alert from "@/components/ui/Alert";
 import { LinkButton } from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
+
+const SCAN_LABEL = {
+  en: "Sign in with card or QR code",
+  hi: "कार्ड या QR कोड से साइन इन करें",
+  mr: "कार्ड किंवा QR कोडने साइन इन करा",
+} as const;
 
 export default function PatientWelcomePage() {
   return (
@@ -19,7 +25,7 @@ export default function PatientWelcomePage() {
 }
 
 function Welcome() {
-  const { tr } = usePatientLang();
+  const { tr, lang } = usePatientLang();
   const params = useSearchParams();
 
   return (
@@ -45,6 +51,9 @@ function Welcome() {
       <p className="mt-8 text-sm text-slate-500">{tr("choose_language")} ↑</p>
       <LinkButton href="/patient/register" size="xl" className="mt-3 w-full">
         {tr("start")} <ArrowRight className="size-5" />
+      </LinkButton>
+      <LinkButton href="/patient/scan" variant="outline" size="xl" className="mt-3 w-full">
+        <ScanLine className="size-5" aria-hidden /> {SCAN_LABEL[lang]}
       </LinkButton>
     </div>
   );

@@ -9,6 +9,7 @@ from app import audit
 from app.config import settings
 from app.db import get_db
 from app.ratelimit import rate_limit
+from app.models.consent import CONSENT_PURPOSES, Consent
 from app.models.hospital import Hospital
 from app.models.otp_challenge import OtpChallenge
 from app.models.patient import Patient
@@ -229,7 +230,57 @@ def patient_me(user=Depends(require_roles("patient")), db: Session = Depends(get
 @patient_router.post("/visits/{visit_id}/start-interview")
 def start_interview(visit_id: int, user=Depends(require_roles("patient")), db: Session = Depends(get_db)):
     visit = _own_visit(db, user, visit_id)
+    if not _has_consent(db, int(visit.patient_id), "case_taking"):
+        raise HTTPException(status_code=409, detail="Consent is required before the interview can start.")
     if visit.status == "waiting":
         visit.status = "in_interview"
         db.commit()
     return {"success": True, "visit_id": int(visit.id), "status": visit.status}
+
+
+CONSENT_TEXT_VERSION = "1.0"
+
+
+class ConsentRequest(BaseModel):
+    visit_id: int
+    purposes: dict[str, bool] = Field(..., description="purpose -> granted")
+    language: str | None = Field(default=None, pattern="^(en|hi|mr)$")
+
+
+def _has_consent(db: Session, patient_id: int, purpose: str) -> bool:
+    """Latest ledger entry for the purpose decides; withdrawal is a newer granted=False row."""
+    latest = (
+        db.query(Consent)
+        .filter(Consent.patient_id == patient_id, Consent.purpose == purpose)
+        .order_by(Consent.id.desc())
+        .first()
+    )
+    return bool(latest and latest.granted)
+
+
+@patient_router.post("/consent", status_code=201)
+def record_consent(payload: ConsentRequest, user=Depends(require_roles("patient")), db: Session = Depends(get_db)):
+    visit = _own_visit(db, user, payload.visit_id)
+    unknown = set(payload.purposes) - set(CONSENT_PURPOSES)
+    if unknown:
+        raise HTTPException(status_code=422, detail="Unknown consent purpose.")
+    for purpose, granted in payload.purposes.items():
+        db.add(
+            Consent(
+                patient_id=visit.patient_id,
+                visit_id=visit.id,
+                purpose=purpose,
+                granted=bool(granted),
+                text_version=CONSENT_TEXT_VERSION,
+                language=payload.language,
+            )
+        )
+    audit.record(db, user, "consent.recorded", "visit", visit.id)
+    db.commit()
+    return {"success": True, "consents": {p: _has_consent(db, int(visit.patient_id), p) for p in CONSENT_PURPOSES}}
+
+
+@patient_router.get("/consent")
+def get_consent(user=Depends(require_roles("patient")), db: Session = Depends(get_db)):
+    pid = int(user["patient_id"])
+    return {"consents": {p: _has_consent(db, pid, p) for p in CONSENT_PURPOSES}, "text_version": CONSENT_TEXT_VERSION}

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -7,6 +8,7 @@ from sqlalchemy.orm import Session
 from app import audit
 from app.config import settings
 from app.db import get_db
+from app.models.revoked_token import RevokedToken
 from app.models.user import Doctor, User
 from app.ratelimit import rate_limit
 from app.schemas import LoginResponse
@@ -56,9 +58,25 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 @router.get("/me")
-def me(current_user=Depends(get_current_user)):
+def me(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    doctor = db.query(Doctor).filter(Doctor.user_id == current_user["uid"]).first()
     return {
         "user_id": current_user["sub"],
         "role": current_user["role"],
         "patient_id": current_user.get("patient_id"),
+        "hospital_id": current_user.get("hospital_id"),
+        "display_name": doctor.full_name if doctor else current_user["sub"],
+        "expires_at": current_user.get("exp"),
     }
+
+
+@router.post("/logout", status_code=204)
+def logout(current_user=Depends(get_current_user), db: Session = Depends(get_db)):
+    """Revoke this token server-side so it cannot be reused after sign-out."""
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    jti = current_user.get("jti")
+    if jti and not db.get(RevokedToken, jti):
+        db.add(RevokedToken(jti=jti, expires_at=datetime.fromtimestamp(current_user["exp"], timezone.utc).replace(tzinfo=None)))
+    audit.record(db, current_user, "auth.logout", "user", current_user["uid"])
+    db.query(RevokedToken).filter(RevokedToken.expires_at < now).delete()  # purge expired entries
+    db.commit()
