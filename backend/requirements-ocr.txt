@@ -1,0 +1,6 @@
+# Optional: image / scanned-PDF OCR. Large install (~1 GB). Without it,
+# images are rejected at processing time with an explicit "OCR not configured" status.
+paddlepaddle
+paddleocr
+# Alternative lightweight engine (requires the Tesseract binary on PATH):
+# pytesseract

@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pymysql
+sqlalchemy
+pydantic-settings
+pyjwt
+pwdlib[argon2]
+python-multipart
+cryptography
