@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -84,7 +84,7 @@ def send_patient_otp(request: SendOTPRequest, db: Session = Depends(get_db)):
         db.commit()
         return {"success": True, "delivery": "sms", "message": "A verification code was sent by SMS.", "mobile": mobile}
 
-    if provider != "dev" or settings.is_production:
+    if provider != "dev" or (settings.is_production and not settings.allow_dev_otp_in_production):
         raise HTTPException(status_code=503, detail="SMS delivery is not configured. Please ask hospital staff for help.")
 
     code = otp_service.generate_code()
