@@ -47,7 +47,6 @@ function Scan() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- feature detection must run in the browser
     setCaps({ qr: qrCameraReader(() => null).available(), nfc: nfcReader.available() });
     return () => abort.current?.abort(); // stop camera / NFC when leaving the page
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function identify(raw: string) {

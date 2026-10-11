@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { CheckCircle2, Download, ExternalLink, Network, RefreshCw, ShieldAlert, Sparkles, XCircle } from "lucide-react";
+import { CheckCircle2, Network, RefreshCw, ShieldAlert, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import DoctorShell, { PageHeader, useStaff } from "@/components/doctor/DoctorShell";
 import Alert from "@/components/ui/Alert";
@@ -82,6 +82,7 @@ function IntegrationsContent() {
   }, [token]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load status on mount
     load();
   }, [load]);
 

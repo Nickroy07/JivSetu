@@ -1,14 +1,13 @@
 ﻿"use client";
 
-import { Activity, CheckCircle2, ChevronRight, FileText, HeartPulse, RefreshCw, Search } from "lucide-react";
+import { ChevronRight, FileText, HeartPulse, RefreshCw, Search } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import DoctorShell, { PageHeader, useStaff } from "@/components/doctor/DoctorShell";
 import AssessmentForm, { AyushLang } from "@/components/ayush/AssessmentForm";
 import Alert from "@/components/ui/Alert";
-import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
-import Card, { CardBody, CardHeader } from "@/components/ui/Card";
+import Card from "@/components/ui/Card";
 import EmptyState from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Field";
 import { Skeleton } from "@/components/ui/Spinner";
@@ -52,6 +51,7 @@ function AyurvedaContent() {
   }, [token, selectedVisitId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- load queue on mount
     loadQueue();
   }, [loadQueue]);
 

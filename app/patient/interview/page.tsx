@@ -54,6 +54,7 @@ function Interview() {
   useEffect(() => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- cancel speech synthesis on question change
       setSpeaking(false);
     }
   }, [q?.id]);

@@ -54,6 +54,13 @@ class Settings(BaseSettings):
     abdm_client_secret: str = ""
     abdm_base_url: str = ""
 
+    # Optional AI-organised draft via OpenRouter. Off unless a key AND a model are set.
+    # The key stays on the server; nothing is sent automatically (clinician clicks a button).
+    openrouter_api_key: str = ""
+    openrouter_model: str = ""
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
+    ai_timeout_seconds: int = 30
+
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False, extra="ignore")
 
     @field_validator("environment")
@@ -68,6 +75,10 @@ class Settings(BaseSettings):
     @cached_property
     def cors_origin_list(self) -> list[str]:
         return [o.strip().rstrip("/") for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def ai_enabled(self) -> bool:
+        return bool(self.openrouter_api_key and self.openrouter_model)
 
     @property
     def database_backend(self) -> str:

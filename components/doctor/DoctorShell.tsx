@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { HeartPulse, LayoutDashboard, ListTodo, LogOut, Menu, Network, X } from "lucide-react";
+import { Activity, LayoutDashboard, ListTodo, LogOut, Menu, Network, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, createContext, useCallback, useContext, useEffect, useState } from "react";
@@ -21,6 +21,9 @@ export function useStaff(): StaffSession {
 const NAV = [
   { href: "/doctor", label: "Overview", icon: LayoutDashboard, exact: true },
   { href: "/doctor/queue", label: "Patient queue", icon: ListTodo },
+  { href: "/doctor/monitoring", label: "Health Trends", icon: Activity },
+  { href: "/doctor/ayurveda", label: "AYUSH Assessment", icon: Sparkles },
+  { href: "/doctor/integrations", label: "ABDM & FHIR", icon: Network },
 ];
 
 interface Health {

@@ -16,6 +16,8 @@ import {
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AiDraftCard from "@/components/doctor/AiDraftCard";
+import ConflictResolver from "@/components/doctor/ConflictResolver";
 import DocumentPanel from "@/components/doctor/DocumentPanel";
 import AssessmentForm, { type AyushLang } from "@/components/ayush/AssessmentForm";
 import DoctorShell, { useStaff } from "@/components/doctor/DoctorShell";
@@ -209,6 +211,7 @@ function CaseContent() {
   const summary = data.draft_summary;
   const flags = (history?.red_flags ?? []).map((f) => (typeof f === "string" ? ({ message: f } as RedFlagItem) : f));
   const decided = history && history.physician_status !== "pending";
+  const openConflicts = (summary?.conflicts ?? []).filter((c) => !data.conflict_resolutions?.[c.field]).length;
 
   return (
     <>
@@ -227,7 +230,8 @@ function CaseContent() {
           <p className="tnum mt-1 text-sm text-slate-500">
             Visit #{data.visit.id} · {formatDate(data.visit.visit_date)} · Patient #{data.patient.id}
             {data.patient.mobile && ` · +91 ${data.patient.mobile}`} ·{" "}
-            <Link href={`/doctor/patient/${data.patient.id}`} className="text-brand-700 hover:underline">All visits</Link>
+            <Link href={`/doctor/patient/${data.patient.id}`} className="text-brand-700 hover:underline">All visits</Link> ·{" "}
+            <Link href={`/doctor/monitoring?patient_id=${data.patient.id}`} className="font-semibold text-brand-700 hover:underline">📈 Health Trends</Link>
           </p>
         </div>
         <div className="grid grid-cols-4 gap-2 text-center sm:flex">
@@ -322,6 +326,76 @@ function CaseContent() {
                 </Card>
               )}
 
+              {history && <AiDraftCard visitId={visit_id} token={token} />}
+
+              {summary && summary.clinical_considerations && summary.clinical_considerations.length > 0 && (
+                <Card className="border-brand-200">
+                  <CardHeader
+                    title="Clinical Evidence Reconciliation & Disease Considerations"
+                    description="Source-linked evidence evaluated against cited clinical criteria. For clinician review — not an automated diagnosis."
+                    icon={<Sparkles className="size-4 text-brand-600" />}
+                    actions={<Badge tone="brand">Hybrid Rules Engine</Badge>}
+                  />
+                  <div className="divide-y divide-slate-100">
+                    {summary.clinical_considerations.map((c, i) => (
+                      <div key={i} className="p-5 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h3 className="font-semibold text-slate-900 text-base">{c.disease}</h3>
+                          <Badge
+                            tone={
+                              c.status.includes("urgent") || c.status.includes("warning") || c.status === "diabetes_range"
+                                ? "danger"
+                                : c.status === "prediabetes_range"
+                                ? "warning"
+                                : "brand"
+                            }
+                          >
+                            {humanize(c.status).toUpperCase()}
+                          </Badge>
+                        </div>
+                        <p className="text-sm font-medium text-slate-800 leading-snug">{c.headline}</p>
+
+                        <div className="space-y-1.5 pt-1">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Supporting Source Evidence</p>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {c.evidence.map((ev, idx) => (
+                              <div key={idx} className="rounded-md border border-slate-200 bg-slate-50 p-2.5 text-xs">
+                                <div className="flex justify-between font-medium text-slate-800">
+                                  <span>{ev.label}</span>
+                                  <span className="font-semibold text-brand-900">{ev.value}</span>
+                                </div>
+                                {ev.source && (
+                                  <div className="mt-1">
+                                    <SourceLine source={ev.source} />
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {c.guideline && (
+                          <div className="rounded-lg border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-700 leading-relaxed">
+                            <span className="font-semibold text-slate-900">Cited Guideline: </span>
+                            {c.guideline}
+                          </div>
+                        )}
+
+                        {c.missing_or_conflicts && c.missing_or_conflicts.length > 0 && (
+                          <div className="space-y-1">
+                            {c.missing_or_conflicts.map((note, nIdx) => (
+                              <p key={nIdx} className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5">
+                                <strong>Clinical Note:</strong> {note}
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
               {summary && (summary.conflicts.length > 0 || summary.missing_information.length > 0) && (
                 <div className="grid gap-6 lg:grid-cols-2">
                   <Card>
@@ -335,6 +409,13 @@ function CaseContent() {
                             <p className="font-medium text-slate-900">{c.message}</p>
                             <SourceLine source={c.patient} />
                             {c.documents.map((d, i) => <SourceLine key={i} source={d} />)}
+                            <ConflictResolver
+                              visitId={visit_id}
+                              field={c.field}
+                              token={token}
+                              resolution={data.conflict_resolutions?.[c.field] ?? null}
+                              onSaved={(all) => setData((d) => (d ? { ...d, conflict_resolutions: all } : d))}
+                            />
                           </li>
                         ))}
                       </ul>
@@ -430,6 +511,11 @@ function CaseContent() {
                     </Button>
                   ) : (
                     <div className="space-y-2">
+                      {openConflicts > 0 && (
+                        <Alert tone="warning">
+                          {openConflicts} conflicting {openConflicts === 1 ? "item needs" : "items need"} a recorded decision and reason before you can accept.
+                        </Alert>
+                      )}
                       <Button
                         variant="success"
                         className="w-full"
@@ -438,7 +524,7 @@ function CaseContent() {
                           submit(amended ? "amended" : "accepted", amended ? "Accepted with edits" : "Accepted");
                         }}
                         loading={saving?.startsWith("Accepted")}
-                        disabled={!!saving}
+                        disabled={!!saving || openConflicts > 0}
                       >
                         <CheckCircle2 className="size-4" /> {Object.keys(cleanEdits).length ? "Accept with edits" : "Accept history"}
                       </Button>

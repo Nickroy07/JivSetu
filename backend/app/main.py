@@ -15,7 +15,7 @@ from app.db import Base, SessionLocal, engine, check_database
 from app.models import Hospital, User, Doctor
 from app.security import hash_password
 
-from app.routers import abdm, admin, ayush, fhir, identifiers, auth, clinical_extraction, clinical_history, doctor_workflow, documents, patient_otp, protected
+from app.routers import abdm, admin, ayush, fhir, health_monitoring, identifiers, auth, clinical_extraction, clinical_history, doctor_workflow, documents, patient_otp, protected
 from app.services.ocr_service import available_engines
 
 logging.basicConfig(
@@ -179,3 +179,4 @@ app.include_router(fhir.router)
 app.include_router(ayush.router)
 app.include_router(identifiers.router)
 app.include_router(abdm.router)
+app.include_router(health_monitoring.router)

@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 
 from sqlalchemy.orm import Session
 
@@ -90,6 +90,12 @@ def process_document_pipeline(document_id: int) -> None:
             document.processing_error = "Text was read, but structured extraction failed."
             db.commit()
             return
+
+        try:
+            from app.services.measurement_sync import sync_measurements_from_extraction
+            sync_measurements_from_extraction(db, document, extraction.extracted_data)
+        except Exception:
+            logger.exception("Failed to sync measurements for document %s", document_id)
 
         document.upload_status = "processed"
         if extraction.extraction_status == "failed":

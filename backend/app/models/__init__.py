@@ -1,4 +1,4 @@
-from app.models.hospital import Hospital
+﻿from app.models.hospital import Hospital
 from app.models.user import User, Doctor
 from app.models.patient import Patient
 from app.models.patient_visit import PatientVisit
@@ -12,3 +12,6 @@ from app.models.consent import Consent
 from app.models.ayush_assessment import AyushAssessment
 from app.models.patient_identifier import PatientIdentifier
 from app.models.abha_link import AbhaLink
+
+from app.models.clinical_measurement import ClinicalMeasurement
+from app.models.conflict_resolution import ConflictResolution

@@ -96,6 +96,15 @@ export interface DocumentItem {
   };
 }
 
+export interface ClinicalConsideration {
+  disease: string;
+  status: string;
+  headline: string;
+  evidence: { label: string; value: string; source?: SourceRef; status?: string; warning?: boolean }[];
+  guideline: string;
+  missing_or_conflicts?: string[];
+}
+
 export interface DraftSummary {
   kind: string;
   disclaimer: string;
@@ -109,6 +118,7 @@ export interface DraftSummary {
   };
   missing_information: { field: string; label: string; section: string; reason: string }[];
   conflicts: { field: string; message: string; patient: SourceRef; documents: SourceRef[] }[];
+  clinical_considerations?: ClinicalConsideration[];
 }
 
 export interface RedFlagItem {
@@ -135,11 +145,80 @@ export interface ClinicalHistoryRecord {
   updated_at: string | null;
 }
 
+export type ConflictDecision = "patient_correct" | "document_correct" | "needs_follow_up";
+
+export interface ConflictResolutionRecord {
+  field: string;
+  decision: ConflictDecision;
+  reason: string;
+  resolved_by: string;
+  resolved_at: string | null;
+}
+
 export interface CompleteCase {
   patient: { id: number; full_name: string | null; mobile: string | null };
   visit: { id: number; visit_date: string | null; status: string; chief_complaint: string | null; updated_at: string | null };
   clinical_history: ClinicalHistoryRecord | null;
   draft_summary: DraftSummary | null;
+  conflict_resolutions?: Record<string, ConflictResolutionRecord>;
   documents: DocumentItem[];
   stats: Record<string, number>;
+}
+
+export interface HealthOverviewCard {
+  test_code: string;
+  canonical_name: string;
+  category: string;
+  unit: string;
+  current_value: number;
+  current_test_date: string;
+  previous_value: number | null;
+  previous_test_date: string | null;
+  absolute_change: number | null;
+  percentage_change: number | null;
+  is_percentage_metric: boolean;
+  trend_direction: "increasing" | "decreasing" | "stable" | "insufficient_data";
+  patient_friendly_summary: string;
+  reference_low: number | null;
+  reference_high: number | null;
+  within_reference: boolean | null;
+  reference_status: "within_range" | "above_range" | "below_range" | "unspecified";
+  guideline_source: string;
+  verification_status: "clinician_verified" | "extracted_unverified" | "manually_entered" | "flagged_discrepancy";
+  document_id: number | null;
+  total_records: number;
+}
+
+export interface PatientHealthDashboard {
+  patient_id: number;
+  patient_name: string;
+  mobile: string | null;
+  active_conditions: string[];
+  overview_cards: HealthOverviewCard[];
+  total_reports_uploaded: number;
+  pending_verifications_count: number;
+  last_updated: string;
+}
+
+export interface MeasurementPoint {
+  id: number;
+  test_code: string;
+  test_name: string;
+  value: number;
+  unit: string;
+  test_date: string;
+  ref_low: number | null;
+  ref_high: number | null;
+  verification_status: string;
+  verified_by: string | null;
+  source_line: string | null;
+  document_id: number | null;
+}
+
+export interface TimelineResponse {
+  patient_id: number;
+  test_code: string | null;
+  timeframe_months: number | null;
+  count: number;
+  items: MeasurementPoint[];
 }
