@@ -71,8 +71,14 @@ export default function DoctorShell({ children }: { children: ReactNode }) {
 
   if (!checked || !session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-500">
-        <Spinner label="Loading workspace" />
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 text-slate-500 gap-3">
+        <Spinner label="Loading workspace..." />
+        <p className="text-xs text-slate-400">
+          Redirecting to clinician login... If not redirected,{" "}
+          <Link href={`/doctor/login?next=${encodeURIComponent(pathname)}`} className="text-brand-700 underline font-medium">
+            click here to sign in
+          </Link>
+        </p>
       </div>
     );
   }

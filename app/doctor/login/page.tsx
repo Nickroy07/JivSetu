@@ -85,8 +85,40 @@ function LoginForm() {
           />
         )}
       </Field>
+
+      <div className="rounded-lg border border-brand-200 bg-brand-50/60 p-3 text-xs">
+        <p className="font-semibold text-brand-900">Hospital Staff Quick Sign-In:</p>
+        <p className="mt-0.5 text-slate-600">Click below to auto-fill verified credentials:</p>
+        <div className="mt-2.5 flex flex-col gap-2 sm:flex-row">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex-1 justify-center bg-white text-xs font-semibold text-brand-800 shadow-xs hover:bg-brand-50"
+            onClick={() => {
+              setUserId("dr-mehta");
+              setPassword("Doctor@12345");
+            }}
+          >
+            👨‍⚕️ Dr. Mehta (Doctor)
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="flex-1 justify-center bg-white text-xs font-semibold text-slate-700 shadow-xs hover:bg-slate-50"
+            onClick={() => {
+              setUserId("admin-01");
+              setPassword("Admin@12345");
+            }}
+          >
+            🛡️ Admin Staff
+          </Button>
+        </div>
+      </div>
+
       <Button type="submit" size="lg" className="w-full" loading={loading}>
-        Sign in
+        Sign in to Workspace
       </Button>
     </form>
   );
