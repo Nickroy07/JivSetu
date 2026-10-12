@@ -1,0 +1,61 @@
+# JIVSETU RED FLAG ENGINE — MANUAL TEST CASES
+
+Use these answer maps in the browser console or a temporary test
+component to verify the rule engine.
+
+CASE 1 — No red flag
+{
+  chief_complaint: "chest_pain",
+  chest_pain_severity: "mild",
+  sweating: "no",
+  breathlessness: "no",
+  chest_pain_radiation: "none"
+}
+
+Expected:
+[]
+
+CASE 2 — Severe chest pain
+{
+  chief_complaint: "chest_pain",
+  chest_pain_severity: "severe"
+}
+
+Expected:
+CHEST_PAIN_SEVERE
+
+CASE 3 — Breathlessness
+{
+  chief_complaint: "chest_pain",
+  breathlessness: "yes"
+}
+
+Expected:
+CHEST_PAIN_BREATHLESSNESS
+
+CASE 4 — Radiation
+{
+  chief_complaint: "chest_pain",
+  chest_pain_radiation: "left_arm"
+}
+
+Expected:
+CHEST_PAIN_RADIATION_LEFT_ARM
+
+CASE 5 — Multiple flags
+{
+  chief_complaint: "chest_pain",
+  chest_pain_severity: "severe",
+  breathlessness: "yes",
+  sweating: "yes",
+  chest_pain_radiation: "left_arm"
+}
+
+Expected:
+4 flags
+
+IMPORTANT:
+The exact answer keys must match the keys used by the actual
+interview question definitions. If your interview uses a
+different key, add that alias to redFlags.ts rather than
+changing the question data.
