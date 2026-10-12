@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { CheckCircle2, Network, RefreshCw, ShieldAlert, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -182,10 +182,10 @@ function IntegrationsContent() {
 
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
-                Exported Resource Types ({fhir?.supported_resources.length ?? 0})
+                Exported Resource Types ({fhir?.supported_resources?.length ?? 0})
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {fhir?.supported_resources.map((res) => (
+                {(fhir?.supported_resources || []).map((res) => (
                   <Badge key={res} tone="brand">
                     {res}
                   </Badge>
